@@ -118,7 +118,7 @@ Page({
     }
     const renderChatSlots = () => { for (let i = 0; i < 5; i++) { const item = this.state.chatList[i]; if (item) { chatSlotBtns[i].setProperty(hmUI.prop.TEXT, item.title); chatSlotBtns[i].setProperty(hmUI.prop.VISIBLE, true); chatDelBtns[i].setProperty(hmUI.prop.VISIBLE, true) } else { chatSlotBtns[i].setProperty(hmUI.prop.VISIBLE, false); chatDelBtns[i].setProperty(hmUI.prop.VISIBLE, false) } } }
 
-    const limBtn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 4, y: 322, w: 184, h: 40, text: "Лимиты", text_size: 15, radius: 12, normal_color: 0x14532d, press_color: 0x166534, click_func: () => openLimits() })
+    const limBtn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 4, y: 324, w: 184, h: 40, text: "Лимиты", text_size: 15, radius: 12, normal_color: 0x14532d, press_color: 0x166534, click_func: () => openLimits() })
     limBtn.setProperty(hmUI.prop.VISIBLE, false)
     const limBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 0, w: 192, h: 368, color: 0x0b0f14 })
     const limTitle = hmUI.createWidget(hmUI.widget.TEXT, { x: 10, y: 40, w: 172, h: 30, text: "Лимиты за день", text_size: 16, color: 0xf8fafc })
@@ -128,12 +128,12 @@ Page({
     const limModelRows = []
     for (let i = 0; i < 4; i++) {
       const rowY = 80 + i * 58
-      const bg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 8, y: rowY, w: 176, h: 50, radius: 10, color: 0x1f2937 })
-      const name = hmUI.createWidget(hmUI.widget.TEXT, { x: 14, y: rowY + 6, w: 164, h: 18, text: "", text_size: 14, color: 0xf8fafc })
-      const barBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 28, w: 100, h: 8, radius: 4, color: 0x374151 })
-      const bar = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 28, w: 2, h: 8, radius: 4, color: 0x3b82f6 })
-      const info = hmUI.createWidget(hmUI.widget.TEXT, { x: 120, y: rowY + 26, w: 60, h: 12, text: "", text_size: 11, color: 0x94a3b8 })
-      const btn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 8, y: rowY, w: 176, h: 50, text: "", text_size: 10, radius: 10, normal_color: 0x000000, press_color: 0x000000, click_func: ((idx) => () => {
+      const bg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 8, y: rowY, w: 176, h: 54, radius: 10, color: 0x1f2937 })
+      const name = hmUI.createWidget(hmUI.widget.TEXT, { x: 14, y: rowY + 8, w: 164, h: 18, text: "", text_size: 14, color: 0xf8fafc })
+      const barBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 30, w: 100, h: 8, radius: 4, color: 0x374151 })
+      const bar = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 30, w: 2, h: 8, radius: 4, color: 0x3b82f6 })
+      const info = hmUI.createWidget(hmUI.widget.TEXT, { x: 120, y: rowY + 28, w: 60, h: 12, text: "", text_size: 11, color: 0x94a3b8 })
+      const btn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 8, y: rowY, w: 176, h: 54, text: "", text_size: 10, radius: 10, normal_color: 0x000000, press_color: 0x000000, click_func: ((idx) => () => {
         const item = limModelRows[idx]; if (!item || item.active) return
         messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => {
           setTimeout(() => openLimits(), 100)
