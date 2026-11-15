@@ -15,7 +15,7 @@ const todayStr = () => { const d = new Date(); return d.getFullYear() + "-" + (d
 
 const getActiveModel = () => {
   try { if (typeof settings !== "undefined" && settings.settingsStorage) { const r = settings.settingsStorage.getItem(ACTIVE_KEY); if (r) return r } } catch (e) {}
-  return "gemini-2.0-flash"
+  return "gemini-2.5-flash-lite"
 }
 const setActiveModel = (n) => { try { if (typeof settings !== "undefined" && settings.settingsStorage) settings.settingsStorage.setItem(ACTIVE_KEY, n) } catch (e) {} }
 const loadStats = (mn) => {
