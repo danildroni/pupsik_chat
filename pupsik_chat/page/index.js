@@ -333,13 +333,9 @@ Page({
       const list = (res && res.chats) || []
       if (list.length > 0) {
         this.state.currentChatId = list[0].id
-        displayBox.setProperty(hmUI.prop.MORE, { x: 10, y: 52, w: 180, h: promptH, text: "Загружаю историю...", text_size: 16, color: 0x94a3b8 })
-        toggleKeyboard(false)
         messageBuilder.request({ method: "OPEN_CHAT", params: { chatId: list[0].id } }).then((r) => {
           if (r && r.lastPrompt) this.state.lastPrompt = r.lastPrompt
-          if (r && r.transcript && String(r.transcript).trim()) showScrollableAnswer(r.transcript, 0xf1f5f9, true)
-          else { displayBox.setProperty(hmUI.prop.MORE, { x: 10, y: 52, w: 180, h: promptH, text: "Новый диалог\nВведите запрос:", text_size: 16, color: 0x38bdf8 }); toggleKeyboard(true) }
-        }).catch(() => { displayBox.setProperty(hmUI.prop.MORE, { x: 10, y: 52, w: 180, h: promptH, text: "Новый диалог\nВведите запрос:", text_size: 16, color: 0x38bdf8 }); toggleKeyboard(true) })
+        }).catch(() => {})
       }
     }).catch(() => {})
   }
