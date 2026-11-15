@@ -128,19 +128,19 @@ Page({
     const limModelRows = []
     for (let i = 0; i < 4; i++) {
       const rowY = 80 + i * 58
-      const bg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 8, y: rowY, w: 176, h: 54, radius: 10, color: 0x1f2937 })
+      const bg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 8, y: rowY, w: 176, h: 54, radius: 10, color: 0x1f2937, click_func: ((idx) => () => {
+        const item = limModelRows[idx]; if (!item || item.active) return
+        messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => { setTimeout(() => openLimits(), 100) })
+      })(i) })
       const name = hmUI.createWidget(hmUI.widget.TEXT, { x: 14, y: rowY + 8, w: 164, h: 18, text: "", text_size: 14, color: 0xf8fafc })
       const barBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 30, w: 100, h: 8, radius: 4, color: 0x374151 })
       const bar = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 30, w: 2, h: 8, radius: 4, color: 0x3b82f6 })
       const info = hmUI.createWidget(hmUI.widget.TEXT, { x: 120, y: rowY + 28, w: 60, h: 12, text: "", text_size: 11, color: 0x94a3b8 })
-      const btn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 8, y: rowY, w: 176, h: 54, text: "", text_size: 10, radius: 10, normal_color: 0x00000000, press_color: 0x00000000, click_func: ((idx) => () => {
-        const item = limModelRows[idx]; if (!item || item.active) return
-        messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => { setTimeout(() => openLimits(), 100) })
-      })(i) })
       bg.setProperty(hmUI.prop.VISIBLE, false); name.setProperty(hmUI.prop.VISIBLE, false)
       barBg.setProperty(hmUI.prop.VISIBLE, false); bar.setProperty(hmUI.prop.VISIBLE, false)
-      info.setProperty(hmUI.prop.VISIBLE, false); btn.setProperty(hmUI.prop.VISIBLE, false)
-      limModelRows.push({ bg, name, barBg, bar, info, btn })
+      info.setProperty(hmUI.prop.VISIBLE, false)
+      limModelRows.push({ bg, name, barBg, bar, info })
+    }
     }
 
     const setLimVisible = (v) => { for (let i = 0; i < limWidgets.length; i++) limWidgets[i].setProperty(hmUI.prop.VISIBLE, v) }
@@ -152,8 +152,7 @@ Page({
         limModelRows[i].barBg.setProperty(hmUI.prop.VISIBLE, false)
         limModelRows[i].bar.setProperty(hmUI.prop.VISIBLE, false)
         limModelRows[i].info.setProperty(hmUI.prop.VISIBLE, false)
-        limModelRows[i].btn.setProperty(hmUI.prop.VISIBLE, false)
-      }
+        }
     }
     const openLimits = () => {
       toggleNewChatDialog(false)
@@ -169,7 +168,7 @@ Page({
             row.barBg.setProperty(hmUI.prop.VISIBLE, true)
             row.bar.setProperty(hmUI.prop.VISIBLE, true)
             row.info.setProperty(hmUI.prop.VISIBLE, true)
-            row.btn.setProperty(hmUI.prop.VISIBLE, true)
+            
             row.name.setProperty(hmUI.prop.TEXT, shortName + (m.active ? " ✓" : ""))
             row.bar.setProperty(hmUI.prop.W, Math.max(2, Math.min(100, Math.round(100 * m.r / m.capR))))
             row.info.setProperty(hmUI.prop.TEXT, m.r + "/" + m.capR)
@@ -186,7 +185,7 @@ Page({
             row.barBg.setProperty(hmUI.prop.VISIBLE, false)
             row.bar.setProperty(hmUI.prop.VISIBLE, false)
             row.info.setProperty(hmUI.prop.VISIBLE, false)
-            row.btn.setProperty(hmUI.prop.VISIBLE, false)
+            
           }
         }
       }).catch(() => {})
