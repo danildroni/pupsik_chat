@@ -42,6 +42,7 @@ Page({
     const bottomY = H - bottomBtnH - 4
     const promptH = Math.max(72, bottomY - 244)
     const keyButtons = []; const chatSlotBtns = []; const chatDelBtns = []
+    const appBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 0, w: 192, h: H, color: 0x0b0f14 })
 
     const displayBox = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 10, y: 52, w: 180, h: promptH,
@@ -125,7 +126,7 @@ Page({
 
     const limBtn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 4, y: 324, w: 184, h: 40, text: "Лимиты", text_size: 15, radius: 12, normal_color: 0x14532d, press_color: 0x166534, click_func: () => openLimits() })
     limBtn.setProperty(hmUI.prop.VISIBLE, false)
-    const limBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 50, w: 192, h: 318, color: 0x0b0f14 })
+    const limBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 0, w: 192, h: H, color: 0x0b0f14 })
     const limTitle = hmUI.createWidget(hmUI.widget.TEXT, { x: 10, y: 58, w: 172, h: 26, text: "Лимиты за день", text_size: 15, color: 0xf8fafc })
     const limClose = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 40, y: 318, w: 112, h: 40, radius: 12, color: 0x2b7fff })
     const limCloseTxt = hmUI.createWidget(hmUI.widget.TEXT, { x: 40, y: 318, w: 112, h: 40, text: "Закрыть", text_size: 14, color: 0xffffff, align_h: hmUI.align.CENTER_H, align_v: hmUI.align.CENTER_V })
