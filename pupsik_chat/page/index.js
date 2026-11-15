@@ -121,13 +121,13 @@ Page({
     const limBtn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 4, y: 324, w: 184, h: 40, text: "Лимиты", text_size: 15, radius: 12, normal_color: 0x14532d, press_color: 0x166534, click_func: () => openLimits() })
     limBtn.setProperty(hmUI.prop.VISIBLE, false)
     const limBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 50, w: 192, h: 318, color: 0x0b0f14 })
-    const limTitle = hmUI.createWidget(hmUI.widget.TEXT, { x: 10, y: 40, w: 172, h: 30, text: "Лимиты за день", text_size: 16, color: 0xf8fafc })
+    const limTitle = hmUI.createWidget(hmUI.widget.TEXT, { x: 10, y: 58, w: 172, h: 30, text: "Лимиты за день", text_size: 16, color: 0xf8fafc })
     const limClose = hmUI.createWidget(hmUI.widget.BUTTON, { x: 40, y: 310, w: 112, h: 44, text: "Закрыть", text_size: 15, radius: 12, normal_color: 0x2b7fff, press_color: 0x1d4ed8, click_func: () => closeLimits() })
     const limWidgets = [limBg, limTitle, limClose]
 
     const limModelRows = []
     for (let i = 0; i < 4; i++) {
-      const rowY = 80 + i * 58
+      const rowY = 95 + i * 58
       const bg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 8, y: rowY, w: 176, h: 54, radius: 10, color: 0x1f2937, click_func: ((idx) => () => {
         const item = limModelRows[idx]; if (!item || item.active) return
         messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => { setTimeout(() => openLimits(), 100) })
@@ -141,7 +141,6 @@ Page({
       info.setProperty(hmUI.prop.VISIBLE, false)
       limModelRows.push({ bg, name, barBg, bar, info })
     }
-    }
 
     const setLimVisible = (v) => { for (let i = 0; i < limWidgets.length; i++) limWidgets[i].setProperty(hmUI.prop.VISIBLE, v) }
     const closeLimits = () => {
@@ -152,7 +151,7 @@ Page({
         limModelRows[i].barBg.setProperty(hmUI.prop.VISIBLE, false)
         limModelRows[i].bar.setProperty(hmUI.prop.VISIBLE, false)
         limModelRows[i].info.setProperty(hmUI.prop.VISIBLE, false)
-        }
+      }
     }
     const openLimits = () => {
       toggleNewChatDialog(false)
@@ -168,7 +167,6 @@ Page({
             row.barBg.setProperty(hmUI.prop.VISIBLE, true)
             row.bar.setProperty(hmUI.prop.VISIBLE, true)
             row.info.setProperty(hmUI.prop.VISIBLE, true)
-            
             row.name.setProperty(hmUI.prop.TEXT, shortName + (m.active ? " ✓" : ""))
             row.bar.setProperty(hmUI.prop.W, Math.max(2, Math.min(100, Math.round(100 * m.r / m.capR))))
             row.info.setProperty(hmUI.prop.TEXT, m.r + "/" + m.capR)
@@ -185,7 +183,6 @@ Page({
             row.barBg.setProperty(hmUI.prop.VISIBLE, false)
             row.bar.setProperty(hmUI.prop.VISIBLE, false)
             row.info.setProperty(hmUI.prop.VISIBLE, false)
-            
           }
         }
       }).catch(() => {})
