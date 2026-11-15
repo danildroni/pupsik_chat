@@ -2,3 +2,8 @@ node_modules/
 dist/
 *.zpk
 *.zab
+.env
+.env.local
+.pupsik_token
+*.key
+secrets.json

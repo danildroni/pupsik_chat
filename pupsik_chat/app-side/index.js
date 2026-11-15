@@ -49,7 +49,7 @@ const isThinkErr = (r) => r.status === 400 && /thinking|level|minimal|low|not su
 const isSwitchable = (r) => r.status >= 500 || /429|quota|limit|not found|not available|timeout|504|deadline|enotfound|network|resource/i.test(String(r.errMsg || ""))
 
 const sendToProxy = (body, cb) => {
-  fetch({ url: PROXY_HOST, method: "POST", timeout: 30000, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+  fetch({ url: PROXY_HOST, method: "POST", timeout: 30000, headers: { "Content-Type": "application/json", "x-pupsik-auth": "bf63871035a5c5cabae3a78deccbb038226d4490b398ff01" }, body: JSON.stringify(body) })
     .then((res) => {
       let data = null; try { data = typeof res.body === "string" ? JSON.parse(res.body) : res.body } catch (e) {}
       const cand = (data && Array.isArray(data.candidates) && data.candidates.length > 0) ? data.candidates.slice(0, 1).pop() : null
