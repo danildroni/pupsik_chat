@@ -121,32 +121,32 @@ Page({
     const limBtn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 4, y: 324, w: 184, h: 40, text: "Лимиты", text_size: 15, radius: 12, normal_color: 0x14532d, press_color: 0x166534, click_func: () => openLimits() })
     limBtn.setProperty(hmUI.prop.VISIBLE, false)
     const limBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 50, w: 192, h: 318, color: 0x0b0f14 })
-    const limTitle = hmUI.createWidget(hmUI.widget.TEXT, { x: 10, y: 58, w: 172, h: 30, text: "Лимиты за день", text_size: 16, color: 0xf8fafc })
-    const limClose = hmUI.createWidget(hmUI.widget.BUTTON, { x: 40, y: 310, w: 112, h: 44, text: "Закрыть", text_size: 15, radius: 12, normal_color: 0x2b7fff, press_color: 0x1d4ed8, click_func: () => closeLimits() })
+    const limTitle = hmUI.createWidget(hmUI.widget.TEXT, { x: 10, y: 58, w: 172, h: 26, text: "Лимиты за день", text_size: 15, color: 0xf8fafc })
+    const limClose = hmUI.createWidget(hmUI.widget.BUTTON, { x: 40, y: 318, w: 112, h: 40, text: "Закрыть", text_size: 14, radius: 12, normal_color: 0x2b7fff, press_color: 0x1d4ed8, click_func: () => closeLimits() })
     const limWidgets = [limBg, limTitle, limClose]
 
     const limModelRows = []
     for (let i = 0; i < 4; i++) {
-      const rowY = 95 + i * 58
-      const bg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 8, y: rowY, w: 176, h: 54, radius: 10, color: 0x1f2937, click_func: ((idx) => () => {
+      const rowY = 90 + i * 54
+      const btn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 8, y: rowY, w: 176, h: 50, text: "", text_size: 1, radius: 10, normal_color: 0x1f2937, press_color: 0x374151, click_func: ((idx) => () => {
         const item = limModelRows[idx]; if (!item || item.active) return
         messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => { setTimeout(() => openLimits(), 100) })
       })(i) })
-      const name = hmUI.createWidget(hmUI.widget.TEXT, { x: 14, y: rowY + 8, w: 164, h: 18, text: "", text_size: 14, color: 0xf8fafc })
-      const barBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 30, w: 100, h: 8, radius: 4, color: 0x374151 })
-      const bar = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 30, w: 2, h: 8, radius: 4, color: 0x3b82f6 })
-      const info = hmUI.createWidget(hmUI.widget.TEXT, { x: 120, y: rowY + 28, w: 60, h: 12, text: "", text_size: 11, color: 0x94a3b8 })
-      bg.setProperty(hmUI.prop.VISIBLE, false); name.setProperty(hmUI.prop.VISIBLE, false)
+      const name = hmUI.createWidget(hmUI.widget.TEXT, { x: 14, y: rowY + 6, w: 164, h: 16, text: "", text_size: 13, color: 0xf8fafc })
+      const barBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 28, w: 96, h: 8, radius: 4, color: 0x374151 })
+      const bar = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 14, y: rowY + 28, w: 2, h: 8, radius: 4, color: 0x3b82f6 })
+      const info = hmUI.createWidget(hmUI.widget.TEXT, { x: 116, y: rowY + 26, w: 64, h: 12, text: "", text_size: 10, color: 0x94a3b8 })
+      btn.setProperty(hmUI.prop.VISIBLE, false); name.setProperty(hmUI.prop.VISIBLE, false)
       barBg.setProperty(hmUI.prop.VISIBLE, false); bar.setProperty(hmUI.prop.VISIBLE, false)
       info.setProperty(hmUI.prop.VISIBLE, false)
-      limModelRows.push({ bg, name, barBg, bar, info })
+      limModelRows.push({ btn, name, barBg, bar, info })
     }
 
     const setLimVisible = (v) => { for (let i = 0; i < limWidgets.length; i++) limWidgets[i].setProperty(hmUI.prop.VISIBLE, v) }
     const closeLimits = () => {
       setLimVisible(false)
       for (let i = 0; i < 4; i++) {
-        limModelRows[i].bg.setProperty(hmUI.prop.VISIBLE, false)
+        limModelRows[i].btn.setProperty(hmUI.prop.VISIBLE, false)
         limModelRows[i].name.setProperty(hmUI.prop.VISIBLE, false)
         limModelRows[i].barBg.setProperty(hmUI.prop.VISIBLE, false)
         limModelRows[i].bar.setProperty(hmUI.prop.VISIBLE, false)
@@ -162,23 +162,25 @@ Page({
           const row = limModelRows[i]; const m = list[i]
           if (m) {
             const shortName = m.name.replace("gemini-", "").replace("-preview", " 3P").replace("-lite", " L")
-            row.bg.setProperty(hmUI.prop.VISIBLE, true)
+            row.btn.setProperty(hmUI.prop.VISIBLE, true)
             row.name.setProperty(hmUI.prop.VISIBLE, true)
             row.barBg.setProperty(hmUI.prop.VISIBLE, true)
             row.bar.setProperty(hmUI.prop.VISIBLE, true)
             row.info.setProperty(hmUI.prop.VISIBLE, true)
             row.name.setProperty(hmUI.prop.TEXT, shortName + (m.active ? " ✓" : ""))
-            row.bar.setProperty(hmUI.prop.W, Math.max(2, Math.min(100, Math.round(100 * m.r / m.capR))))
+            row.bar.setProperty(hmUI.prop.W, Math.max(2, Math.min(96, Math.round(96 * m.r / m.capR))))
             row.info.setProperty(hmUI.prop.TEXT, m.r + "/" + m.capR)
             if (m.active) {
-              row.bg.setProperty(hmUI.prop.COLOR, 0x065f46)
+              row.btn.setProperty(hmUI.prop.NORMAL_COLOR, 0x065f46)
+              row.btn.setProperty(hmUI.prop.PRESS_COLOR, 0x047857)
               row.name.setProperty(hmUI.prop.COLOR, 0xffffff)
             } else {
-              row.bg.setProperty(hmUI.prop.COLOR, 0x1f2937)
+              row.btn.setProperty(hmUI.prop.NORMAL_COLOR, 0x1f2937)
+              row.btn.setProperty(hmUI.prop.PRESS_COLOR, 0x374151)
               row.name.setProperty(hmUI.prop.COLOR, 0xf8fafc)
             }
           } else {
-            row.bg.setProperty(hmUI.prop.VISIBLE, false)
+            row.btn.setProperty(hmUI.prop.VISIBLE, false)
             row.name.setProperty(hmUI.prop.VISIBLE, false)
             row.barBg.setProperty(hmUI.prop.VISIBLE, false)
             row.bar.setProperty(hmUI.prop.VISIBLE, false)
