@@ -9,7 +9,12 @@ const TOKEN_PRESETS = Array.of(150, 300, 500, 1000)
 const TOKEN_COLORS = Array.of(0x3730a3, 0x1d4ed8, 0x701a75, 0x831843)
 
 const shortModel = (name) => String(name || "?").replace("gemini-", "").replace("-flash-lite", " L").replace("-flash", " F").replace("-preview", "")
-
+const barStr = (r, cap) => {
+  const n = Math.max(0, Math.min(10, Math.round(10 * r / cap)))
+  let s = "["
+  for (let j = 0; j < 10; j++) { s += (j < n ? "#" : ".") }
+  return s + "]"
+}
 const calcTextHeight = (text) => {
   const paras = String(text || "").split("\n")
   let lines = 0
@@ -50,14 +55,11 @@ Page({
       click_func: () => { if (this.state.isMenuOpen) closeChatMenu(); else openChatMenu() }
     })
     const tokenBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 100, y: 8, w: 88, h: 40, radius: 14, color: 0x1d4ed8 })
-    const tokenBtn = hmUI.createWidget(hmUI.widget.TEXT, { x: 100, y: 8, w: 88, h: 40, text: "? · 300 т", text_size: 11, color: 0xe2e8f0, align_h: hmUI.align.CENTER_H, align_v: hmUI.align.CENTER_V })
-    const refreshTokenText = () => {
-      tokenBtn.setProperty(hmUI.prop.TEXT, this.state.activeShort + " · " + String(TOKEN_PRESETS[this.state.tokenIdx]) + " т")
-    }
+    const tokenBtn = hmUI.createWidget(hmUI.widget.TEXT, { x: 100, y: 8, w: 88, h: 40, text: "?/300т", text_size: 11, color: 0xe2e8f0, align_h: hmUI.align.CENTER_H, align_v: hmUI.align.CENTER_V })
+    const refreshTokenText = () => { tokenBtn.setProperty(hmUI.prop.TEXT, this.state.activeShort + "/" + String(TOKEN_PRESETS[this.state.tokenIdx]) + "т") }
     tokenBtn.addEventListener(hmUI.event.CLICK_UP, () => {
       this.state.tokenIdx = (this.state.tokenIdx + 1) % TOKEN_PRESETS.length
-      const i = this.state.tokenIdx
-      tokenBg.setProperty(hmUI.prop.COLOR, TOKEN_COLORS[i])
+      tokenBg.setProperty(hmUI.prop.COLOR, TOKEN_COLORS[this.state.tokenIdx])
       refreshTokenText()
     })
     messageBuilder.request({ method: "GET_ACTIVE" }).then((res) => {
@@ -69,13 +71,8 @@ Page({
     retryBtn.addEventListener(hmUI.event.CLICK_UP, () => {
       displayBox.setProperty(hmUI.prop.TEXT, "Проверяю...")
       messageBuilder.request({ method: "CHECK_AI" }).then((st) => {
-        if (st && st.done && st.answer && st.answer !== this.state.lastAnswerText) {
-          this.state.lastAnswerText = st.answer
-          showScrollableAnswer(st.answer, 0xf1f5f9)
-        } else if (this.state.lastPrompt) {
-          this.state.lastAnswerText = ""
-          sendPromptToAI(this.state.lastPrompt, true)
-        }
+        if (st && st.done && st.answer && st.answer !== this.state.lastAnswerText) { this.state.lastAnswerText = st.answer; showScrollableAnswer(st.answer, 0xf1f5f9) }
+        else if (this.state.lastPrompt) { this.state.lastAnswerText = ""; sendPromptToAI(this.state.lastPrompt, true) }
       }).catch(() => { if (this.state.lastPrompt) { this.state.lastAnswerText = ""; sendPromptToAI(this.state.lastPrompt, true) } })
     })
 
@@ -121,7 +118,7 @@ Page({
     for (let i = 0; i < 5; i++) {
       const rowY = 102 + i * 44
       const cBtn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 6, y: rowY, w: 142, h: 40, text: "", text_size: 14, radius: 12, normal_color: 0x1c212b, press_color: 0x2d3646, click_func: () => { const item = this.state.chatList[i]; if (!item) return; this.state.currentChatId = item.id; closeChatMenu(); toggleKeyboard(false); setPageScroll(false); displayBox.setProperty(hmUI.prop.MORE, { x: 10, y: 52, w: 180, h: promptH, text: "Открываю...", text_size: 16, color: 0x94a3b8 }); messageBuilder.request({ method: "OPEN_CHAT", params: { chatId: item.id } }).then((res) => { if (res && res.lastPrompt) this.state.lastPrompt = res.lastPrompt; showScrollableAnswer((res && res.transcript) ? res.transcript : "Пусто", 0xf1f5f9) }) } })
-      const dBtn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 151, y: rowY, w: 37, h: 40, text: "×", text_size: 18, radius: 12, normal_color: 0x3f1d24, press_color: 0x6b2835, click_func: () => { const item = this.state.chatList[i]; if (!item) return; messageBuilder.request({ method: "DELETE_CHAT", params: { chatId: item.id } }).then((res) => { this.state.chatList = (res && Array.isArray(res.chats)) ? res.chats : []; renderChatSlots() }) } })
+      const dBtn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 151, y: rowY, w: 37, h: 40, text: "x", text_size: 18, radius: 12, normal_color: 0x3f1d24, press_color: 0x6b2835, click_func: () => { const item = this.state.chatList[i]; if (!item) return; messageBuilder.request({ method: "DELETE_CHAT", params: { chatId: item.id } }).then((res) => { this.state.chatList = (res && Array.isArray(res.chats)) ? res.chats : []; renderChatSlots() }) } })
       cBtn.setProperty(hmUI.prop.VISIBLE, false); dBtn.setProperty(hmUI.prop.VISIBLE, false); chatSlotBtns.push(cBtn); chatDelBtns.push(dBtn)
     }
     const renderChatSlots = () => { for (let i = 0; i < 5; i++) { const item = this.state.chatList[i]; if (item) { chatSlotBtns[i].setProperty(hmUI.prop.TEXT, item.title); chatSlotBtns[i].setProperty(hmUI.prop.VISIBLE, true); chatDelBtns[i].setProperty(hmUI.prop.VISIBLE, true) } else { chatSlotBtns[i].setProperty(hmUI.prop.VISIBLE, false); chatDelBtns[i].setProperty(hmUI.prop.VISIBLE, false) } } }
@@ -130,34 +127,42 @@ Page({
     limBtn.setProperty(hmUI.prop.VISIBLE, false)
     const limBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 50, w: 192, h: 318, color: 0x0b0f14 })
     const limTitle = hmUI.createWidget(hmUI.widget.TEXT, { x: 10, y: 58, w: 172, h: 26, text: "Лимиты за день", text_size: 15, color: 0xf8fafc })
-    const limClose = hmUI.createWidget(hmUI.widget.BUTTON, { x: 40, y: 318, w: 112, h: 40, text: "Закрыть", text_size: 14, radius: 12, normal_color: 0x2b7fff, press_color: 0x1d4ed8, click_func: () => closeLimits() })
-    const limWidgets = [limBg, limTitle, limClose]
+    const limClose = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 40, y: 318, w: 112, h: 40, radius: 12, color: 0x2b7fff })
+    const limCloseTxt = hmUI.createWidget(hmUI.widget.TEXT, { x: 40, y: 318, w: 112, h: 40, text: "Закрыть", text_size: 14, color: 0xffffff, align_h: hmUI.align.CENTER_H, align_v: hmUI.align.CENTER_V })
+    limCloseTxt.addEventListener(hmUI.event.CLICK_UP, () => closeLimits())
+    const limWidgets = [limBg, limTitle, limClose, limCloseTxt]
 
     const limModelRows = []
+    const paintRow = (i) => {
+      const row = limModelRows[i]
+      if (!row || !row.have) { row.bg.setProperty(hmUI.prop.VISIBLE, false); row.txt.setProperty(hmUI.prop.VISIBLE, false); return }
+      row.bg.setProperty(hmUI.prop.VISIBLE, true); row.txt.setProperty(hmUI.prop.VISIBLE, true)
+      row.bg.setProperty(hmUI.prop.COLOR, row.active ? 0x065f46 : 0x1f2937)
+      row.txt.setProperty(hmUI.prop.TEXT, shortModel(row.name) + " " + barStr(row.r, row.capR) + " " + row.r + "/" + row.capR + (row.active ? " *" : ""))
+    }
     for (let i = 0; i < 4; i++) {
       const rowY = 92 + i * 56
-      const btn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 8, y: rowY, w: 176, h: 50, text: "", text_size: 10, text_color: 0xf8fafc, align_h: hmUI.align.LEFT, radius: 10, normal_color: 0x1f2937, press_color: 0x374151, click_func: ((idx) => () => {
-        const item = limModelRows[idx]; if (!item || item.active) return
-        messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => {
-          this.state.activeShort = shortModel(item.name)
-          refreshTokenText()
-          setTimeout(() => openLimits(), 100)
-        })
-      })(i) })
-      btn.setProperty(hmUI.prop.VISIBLE, false)
-      limModelRows.push({ btn })
+      const bg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 8, y: rowY, w: 176, h: 50, radius: 10, color: 0x1f2937 })
+      const txt = hmUI.createWidget(hmUI.widget.TEXT, { x: 12, y: rowY, w: 168, h: 50, text: "", text_size: 11, color: 0xf8fafc, align_h: hmUI.align.LEFT, align_v: hmUI.align.CENTER_V })
+      bg.setProperty(hmUI.prop.VISIBLE, false); txt.setProperty(hmUI.prop.VISIBLE, false)
+      const rowObj = { bg, txt, name: "", active: false, r: 0, capR: 1, have: false }
+      txt.addEventListener(hmUI.event.CLICK_UP, ((idx) => () => {
+        const it = limModelRows[idx]
+        if (!it || !it.have || it.active) return
+        for (let k = 0; k < 4; k++) { limModelRows[k].active = (k === idx) }
+        it.active = true
+        this.state.activeShort = shortModel(it.name)
+        refreshTokenText()
+        for (let k = 0; k < 4; k++) paintRow(k)
+        messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: it.name } }).catch(() => {})
+      })(i))
+      limModelRows.push(rowObj)
     }
 
-    const barStr = (r, cap) => {
-      const n = Math.max(0, Math.min(10, Math.round(10 * r / cap)))
-      let s = "["
-      for (let j = 0; j < 10; j++) { s += (j < n ? "#" : ".") }
-      return s + "]"
-    }
     const setLimVisible = (v) => { for (let i = 0; i < limWidgets.length; i++) limWidgets[i].setProperty(hmUI.prop.VISIBLE, v) }
     const closeLimits = () => {
       setLimVisible(false)
-      for (let i = 0; i < 4; i++) { limModelRows[i].btn.setProperty(hmUI.prop.VISIBLE, false) }
+      for (let i = 0; i < 4; i++) { limModelRows[i].bg.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].txt.setProperty(hmUI.prop.VISIBLE, false) }
     }
     const openLimits = () => {
       toggleNewChatDialog(false)
@@ -167,20 +172,10 @@ Page({
         for (let i = 0; i < 4; i++) {
           const row = limModelRows[i]; const m = list[i]
           if (m) {
-            const sn = shortModel(m.name)
-            if (m.active) this.state.activeShort = sn
-            row.btn.setProperty(hmUI.prop.VISIBLE, true)
-            row.btn.setProperty(hmUI.prop.TEXT, sn + "  " + barStr(m.r, m.capR) + " " + m.r + "/" + m.capR + (m.active ? " ✓" : ""))
-            if (m.active) {
-              row.btn.setProperty(hmUI.prop.NORMAL_COLOR, 0x065f46)
-              row.btn.setProperty(hmUI.prop.PRESS_COLOR, 0x047857)
-            } else {
-              row.btn.setProperty(hmUI.prop.NORMAL_COLOR, 0x1f2937)
-              row.btn.setProperty(hmUI.prop.PRESS_COLOR, 0x374151)
-            }
-          } else {
-            row.btn.setProperty(hmUI.prop.VISIBLE, false)
-          }
+            row.have = true; row.name = m.name; row.active = m.active; row.r = m.r; row.capR = m.capR
+            if (m.active) this.state.activeShort = shortModel(m.name)
+          } else { row.have = false }
+          paintRow(i)
         }
         refreshTokenText()
       }).catch(() => {})
