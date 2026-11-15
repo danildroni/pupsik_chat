@@ -4,7 +4,6 @@ const messageBuilder = new MessageBuilder()
 const PROXY_HOST = "https://long-snow-d028" + ".danildroni10.workers.dev"
 
 const MODELS = [
-  { name: "gemini-3.8-flash", capR: 20 },
   { name: "gemini-3.6-flash", capR: 20 },
   { name: "gemini-3.5-flash-lite", capR: 1000 },
   { name: "gemini-2.5-flash-lite", capR: 1500 }
@@ -15,8 +14,11 @@ const todayStr = () => { const d = new Date(); return d.getFullYear() + "-" + (d
 const sn = (n) => String(n || "?").replace("gemini-", "").replace("-flash-lite", " L").replace("-flash", " F").replace("-preview", "")
 
 const getActiveModel = () => {
-  try { if (typeof settings !== "undefined" && settings.settingsStorage) { const r = settings.settingsStorage.getItem(ACTIVE_KEY); if (r) return r } } catch (e) {}
-  return "gemini-3.5-flash-lite"
+  let n = "gemini-3.5-flash-lite"
+  try { if (typeof settings !== "undefined" && settings.settingsStorage) { const r = settings.settingsStorage.getItem(ACTIVE_KEY); if (r) n = r } } catch (err) {}
+  let ok = false
+  for (let i = 0; i < MODELS.length; i++) { if (MODELS[i].name === n) ok = true }
+  return ok ? n : MODELS[0].name
 }
 const setActiveModel = (n) => { try { if (typeof settings !== "undefined" && settings.settingsStorage) settings.settingsStorage.setItem(ACTIVE_KEY, n) } catch (e) {} }
 const loadStats = (mn) => {
