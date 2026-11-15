@@ -34,7 +34,7 @@ const log = function () { try { console.log.apply(console, ["[pupsik]"].concat(A
 
 const loadChats = () => { try { if (typeof settings !== "undefined" && settings.settingsStorage) { const r = settings.settingsStorage.getItem("pupsik_chats"); if (r) return JSON.parse(r) } } catch (e) {} return [] }
 const saveChats = (chats) => { const s = chats.slice(0, 6); try { if (typeof settings !== "undefined" && settings.settingsStorage) settings.settingsStorage.setItem("pupsik_chats", JSON.stringify(s)) } catch (e) {} }
-const formatChatTranscript = (messages) => messages.map((m) => (m.role === "user" ? "▸ Вы:\n" : "✦ ИИ:\n") + m.content).join("\n\n")
+const formatChatTranscript = (messages) => messages.map((m) => (m.role === "user" ? "Вы:\n" : "ИИ:\n") + m.content).join("\n\n")
 const getLastUserPrompt = (messages) => { for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].role === "user") return messages[i].content } return "" }
 const cleanOutputText = (rawText) => String(rawText || "").replace(/[*#_`~]/g, "").replace(/\n{3,}/g, "\n\n").trim()
 
@@ -43,15 +43,17 @@ const sendToProxy = (body, onFinish) => {
     .then((res) => {
       let data = null; try { data = typeof res.body === "string" ? JSON.parse(res.body) : res.body } catch (e) {}
       const cand = (data && Array.isArray(data.candidates) && data.candidates.length > 0) ? data.candidates.slice(0, 1).pop() : null
-      const parts = (cand && cand.content && Array.isArray(cand.content.parts)) ? cand.content.parts : []
-      const content = parts.map((p) => p.text || "").join("")
-      if (content) onFinish({ ok: true, content: content, data: data })
+      const allParts = (cand && cand.content && Array.isArray(cand.content.parts)) ? cand.content.parts : []
+      const textParts = allParts.filter((p) => !p.thought)
+      const content = textParts.map((p) => p.text || "").join("")
+      const finishReason = cand ? String(cand.finishReason || "") : ""
+      if (content || finishReason === "STOP") onFinish({ ok: true, content: content, finishReason: finishReason, data: data })
       else {
         const errMsg = (data && data.error && data.error.message) ? data.error.message : ("HTTP " + String(res.status))
-        onFinish({ ok: false, error: errMsg, data: data, status: res.status })
+        onFinish({ ok: false, error: errMsg, finishReason: finishReason, data: data, status: res.status })
       }
     })
-    .catch((err) => onFinish({ ok: false, error: String(err) }))
+    .catch((err) => onFinish({ ok: false, error: String(err), finishReason: "" }))
 }
 
 AppSideService({
@@ -82,8 +84,8 @@ AppSideService({
         ctx.response({ data: { chats: chats.map((c) => ({ id: c.id, title: c.title })) } })
       }
       if (jsonRpc.method === "CHECK_AI") ctx.response({ data: activeJob })
-
       if (jsonRpc.method === "GET_ACTIVE") ctx.response({ data: { name: getActiveModel() } })
+
       if (jsonRpc.method === "GET_MODELS_STATS") {
         const active = getActiveModel()
         const list = MODELS.map((m) => { const st = loadStats(m.name); return { name: m.name, capR: m.capR, r: st.r, active: m.name === active } })
@@ -110,7 +112,7 @@ AppSideService({
 
         let chats = loadChats()
         let chat = chats.find((c) => c.id === chatId)
-        if (!chat) { chat = { id: chatId, title: (noContext ? "[Б] " : "") + cleanPrompt.slice(0, 12), noContext: noContext, messages: [] }; chats.unshift(chat) }
+        if (!chat) { chat = { id: chatId, title: (noContext ? "[B] " : "") + cleanPrompt.slice(0, 12), noContext: noContext, messages: [] }; chats.unshift(chat) }
         if (isRetry && chat.messages.length >= 2 && chat.messages[chat.messages.length - 1].role === "assistant") { chat.messages.pop(); chat.messages.pop() }
         saveChats(chats)
 
@@ -128,7 +130,21 @@ AppSideService({
           generationConfig: { temperature: 0.3, maxOutputTokens: maxTokens }
         }
 
-        const tryModel = (modelIdx, body) => {
+        const finalize = (modelName, content, finishReason) => {
+          let out = cleanOutputText(content) || content
+          if (finishReason === "MAX_TOKENS") out = out + "\n[ответ обрезан - подними токены кнопкой сверху]"
+          let freshChats = loadChats()
+          let freshChat = freshChats.find((c) => c.id === chatId) || chat
+          freshChat.messages.push({ role: "user", content: cleanPrompt })
+          freshChat.messages.push({ role: "assistant", content: out })
+          if (!freshChats.find((c) => c.id === chatId)) freshChats.unshift(freshChat)
+          saveChats(freshChats)
+          const stx = loadStats(modelName); stx.r += 1; saveStats(stx, modelName)
+          activeJob = { id: jobId, done: true, answer: formatChatTranscript(freshChat.messages), chatId: freshChat.id }
+          log("DONE via", modelName, "finish:", finishReason)
+        }
+
+        const tryModel = (modelIdx, body, retried) => {
           if (modelIdx >= MODELS.length) {
             activeJob = { id: jobId, done: true, answer: "Все модели исчерпали лимит", chatId: chat.id }
             return
@@ -137,21 +153,22 @@ AppSideService({
           body.model = modelName
           sendToProxy(body, (result) => {
             if (result.ok) {
-              const out = cleanOutputText(result.content) || result.content
-              let freshChats = loadChats()
-              let freshChat = freshChats.find((c) => c.id === chatId) || chat
-              freshChat.messages.push({ role: "user", content: cleanPrompt })
-              freshChat.messages.push({ role: "assistant", content: out })
-              if (!freshChats.find((c) => c.id === chatId)) freshChats.unshift(freshChat)
-              saveChats(freshChats)
-              const stx = loadStats(modelName); stx.r += 1; saveStats(stx, modelName)
-              activeJob = { id: jobId, done: true, answer: formatChatTranscript(freshChat.messages), chatId: freshChat.id }
-              log("DONE via", modelName)
+              const fr = result.finishReason
+              const curMax = Number(body.generationConfig && body.generationConfig.maxOutputTokens) || maxTokens
+              if (fr === "MAX_TOKENS" && !retried) {
+                log("MAX_TOKENS on", modelName, "-> retry x2")
+                const body2 = JSON.parse(JSON.stringify(body))
+                body2.generationConfig.maxOutputTokens = Math.min(2000, curMax * 2)
+                tryModel(modelIdx, body2, true)
+                return
+              }
+              finalize(modelName, result.content, fr)
             } else {
               const err = String(result.error || "")
-              if ((err.indexOf("429") !== -1 || err.indexOf("quota") !== -1 || err.indexOf("limit") !== -1 || err.indexOf("not found") !== -1 || err.indexOf("not available") !== -1 || err.indexOf("unsupported") !== -1 || err.indexOf("free") !== -1) && modelIdx + 1 < MODELS.length) {
-                log("RATE LIMIT on", modelName, "→ fallback")
-                tryModel(modelIdx + 1, body)
+              const switchable = (err.indexOf("429") !== -1 || err.indexOf("quota") !== -1 || err.indexOf("limit") !== -1 || err.indexOf("not found") !== -1 || err.indexOf("not available") !== -1 || err.indexOf("unsupported") !== -1 || err.indexOf("free") !== -1)
+              if (switchable && modelIdx + 1 < MODELS.length) {
+                log("FALLBACK", modelName, "->", MODELS[modelIdx + 1].name)
+                tryModel(modelIdx + 1, body, false)
               } else {
                 activeJob = { id: jobId, done: true, answer: "Ошибка: " + err, chatId: chat.id }
                 log("FAIL via", modelName, err)
@@ -161,7 +178,7 @@ AppSideService({
         }
 
         const startIdx = MODELS.findIndex((m) => m.name === getActiveModel())
-        tryModel(startIdx >= 0 ? startIdx : 0, baseBody)
+        tryModel(startIdx >= 0 ? startIdx : 0, baseBody, false)
       }
     })
   },
