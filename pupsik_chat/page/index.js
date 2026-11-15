@@ -135,28 +135,41 @@ Page({
       const info = hmUI.createWidget(hmUI.widget.TEXT, { x: 120, y: rowY + 28, w: 60, h: 12, text: "", text_size: 11, color: 0x94a3b8 })
       const btn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 8, y: rowY, w: 176, h: 54, text: "", text_size: 10, radius: 10, normal_color: 0x000000, press_color: 0x000000, click_func: ((idx) => () => {
         const item = limModelRows[idx]; if (!item || item.active) return
-        messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => {
-          setTimeout(() => openLimits(), 100)
-        })
+        messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => { setTimeout(() => openLimits(), 100) })
       })(i) })
       bg.setProperty(hmUI.prop.VISIBLE, false); name.setProperty(hmUI.prop.VISIBLE, false)
       barBg.setProperty(hmUI.prop.VISIBLE, false); bar.setProperty(hmUI.prop.VISIBLE, false)
       info.setProperty(hmUI.prop.VISIBLE, false); btn.setProperty(hmUI.prop.VISIBLE, false)
       limModelRows.push({ bg, name, barBg, bar, info, btn })
     }
+
     const setLimVisible = (v) => { for (let i = 0; i < limWidgets.length; i++) limWidgets[i].setProperty(hmUI.prop.VISIBLE, v) }
-    const closeLimits = () => { setLimVisible(false); for (let i = 0; i < 4; i++) { limModelRows[i].bg.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].name.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].barBg.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].bar.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].info.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].btn.setProperty(hmUI.prop.VISIBLE, false) } }
+    const closeLimits = () => {
+      setLimVisible(false)
+      for (let i = 0; i < 4; i++) {
+        limModelRows[i].bg.setProperty(hmUI.prop.VISIBLE, false)
+        limModelRows[i].name.setProperty(hmUI.prop.VISIBLE, false)
+        limModelRows[i].barBg.setProperty(hmUI.prop.VISIBLE, false)
+        limModelRows[i].bar.setProperty(hmUI.prop.VISIBLE, false)
+        limModelRows[i].info.setProperty(hmUI.prop.VISIBLE, false)
+        limModelRows[i].btn.setProperty(hmUI.prop.VISIBLE, false)
+      }
+    }
     const openLimits = () => {
-      toggleNewChatDialog(false); setLimVisible(true)
+      toggleNewChatDialog(false)
+      setLimVisible(true)
       messageBuilder.request({ method: "GET_MODELS_STATS" }).then((res) => {
         const list = (res && res.models) || []
         for (let i = 0; i < 4; i++) {
           const row = limModelRows[i]; const m = list[i]
           if (m) {
             const shortName = m.name.replace("gemini-", "").replace("-preview", " 3P").replace("-lite", " L")
-            row.bg.setProperty(hmUI.prop.VISIBLE, true); row.name.setProperty(hmUI.prop.VISIBLE, true)
-            row.barBg.setProperty(hmUI.prop.VISIBLE, true); row.bar.setProperty(hmUI.prop.VISIBLE, true)
-            row.info.setProperty(hmUI.prop.VISIBLE, true); row.btn.setProperty(hmUI.prop.VISIBLE, true)
+            row.bg.setProperty(hmUI.prop.VISIBLE, true)
+            row.name.setProperty(hmUI.prop.VISIBLE, true)
+            row.barBg.setProperty(hmUI.prop.VISIBLE, true)
+            row.bar.setProperty(hmUI.prop.VISIBLE, true)
+            row.info.setProperty(hmUI.prop.VISIBLE, true)
+            row.btn.setProperty(hmUI.prop.VISIBLE, true)
             row.name.setProperty(hmUI.prop.TEXT, shortName + (m.active ? " ✓" : ""))
             row.bar.setProperty(hmUI.prop.W, Math.max(2, Math.min(100, Math.round(100 * m.r / m.capR))))
             row.info.setProperty(hmUI.prop.TEXT, m.r + "/" + m.capR)
@@ -168,34 +181,12 @@ Page({
               row.name.setProperty(hmUI.prop.COLOR, 0xf8fafc)
             }
           } else {
-            row.bg.setProperty(hmUI.prop.VISIBLE, false); row.name.setProperty(hmUI.prop.VISIBLE, false)
-            row.barBg.setProperty(hmUI.prop.VISIBLE, false); row.bar.setProperty(hmUI.prop.VISIBLE, false)
-            row.info.setProperty(hmUI.prop.VISIBLE, false); row.btn.setProperty(hmUI.prop.VISIBLE, false)
-          }
-        }
-      }).catch(() => {})
-    }
-    setLimVisible(false); for (let i = 0; i < 4; i++) { limModelRows[i].bg.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].name.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].barBg.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].bar.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].info.setProperty(hmUI.prop.VISIBLE, false); limModelRows[i].btn.setProperty(hmUI.prop.VISIBLE, false) } }
-    const openLimits = () => {
-      toggleNewChatDialog(false); setLimVisible(true)
-      messageBuilder.request({ method: "GET_MODELS_STATS" }).then((res) => {
-        const list = (res && res.models) || []
-        for (let i = 0; i < 4; i++) {
-          const row = limModelRows[i]; const m = list[i]
-          if (m) {
-            const shortName = m.name.replace("gemini-", "").replace("-preview", " 3P").replace("-lite", " L")
-            row.bg.setProperty(hmUI.prop.VISIBLE, true); row.name.setProperty(hmUI.prop.VISIBLE, true)
-            row.barBg.setProperty(hmUI.prop.VISIBLE, true); row.bar.setProperty(hmUI.prop.VISIBLE, true)
-            row.info.setProperty(hmUI.prop.VISIBLE, true); row.btn.setProperty(hmUI.prop.VISIBLE, true)
-            row.name.setProperty(hmUI.prop.TEXT, shortName + (m.active ? " ✓" : ""))
-            row.bar.setProperty(hmUI.prop.W, Math.max(2, Math.min(100, Math.round(100 * m.r / m.capR))))
-            row.info.setProperty(hmUI.prop.TEXT, m.r + "/" + m.capR)
-            row.btn.setProperty(hmUI.prop.TEXT, m.active ? "АКТИВНА" : "ВЫБРАТЬ")
-            row.btn.setProperty(hmUI.prop.NORMAL_COLOR, m.active ? 0x065f46 : 0x2b7fff)
-          } else {
-            row.bg.setProperty(hmUI.prop.VISIBLE, false); row.name.setProperty(hmUI.prop.VISIBLE, false)
-            row.barBg.setProperty(hmUI.prop.VISIBLE, false); row.bar.setProperty(hmUI.prop.VISIBLE, false)
-            row.info.setProperty(hmUI.prop.VISIBLE, false); row.btn.setProperty(hmUI.prop.VISIBLE, false)
+            row.bg.setProperty(hmUI.prop.VISIBLE, false)
+            row.name.setProperty(hmUI.prop.VISIBLE, false)
+            row.barBg.setProperty(hmUI.prop.VISIBLE, false)
+            row.bar.setProperty(hmUI.prop.VISIBLE, false)
+            row.info.setProperty(hmUI.prop.VISIBLE, false)
+            row.btn.setProperty(hmUI.prop.VISIBLE, false)
           }
         }
       }).catch(() => {})
