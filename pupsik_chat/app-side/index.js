@@ -35,16 +35,18 @@ let partBuf = ""
 const log = function () { try { console.log.apply(console, ["[pupsik]"].concat(Array.prototype.slice.call(arguments))) } catch (e) {} }
 
 const loadChats = () => { try { if (typeof settings !== "undefined" && settings.settingsStorage) { const r = settings.settingsStorage.getItem("pupsik_chats"); if (r) return JSON.parse(r) } } catch (e) {} return [] }
-const saveChats = (chats) => { const s = chats.slice(0, 6); try { if (typeof settings !== "undefined" && settings.settingsStorage) settings.settingsStorage.setItem("pupsik_chats", JSON.stringify(s)) } catch (e) {} }
+const saveChats = (chats) => {
+  const trim = (arr, mc, nc) => arr.slice(0, nc).map((c) => Object.assign({}, c, { messages: (c.messages || []).slice(-mc) }))
+  const attempts = [ trim(chats, 24, 4), trim(chats, 12, 3), trim(chats, 6, 2), trim(chats, 2, 1) ]
+  for (let i = 0; i < attempts.length; i++) {
+    try { if (typeof settings !== "undefined" && settings.settingsStorage) { settings.settingsStorage.setItem("pupsik_chats", JSON.stringify(attempts[i])); return } } catch (e) {}
+  }
+}
 const formatChatTranscript = (messages) => messages.map((m) => (m.role === "user" ? "Вы:\n" : "ИИ:\n") + m.content).join("\n\n")
 const getLastUserPrompt = (messages) => { for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].role === "user") return messages[i].content } return "" }
 const cleanOutputText = (rawText) => String(rawText || "").replace(/[*#_`~]/g, "").replace(/\n{3,}/g, "\n\n").trim()
 
-const ladderFor = (n) => {
-  if (String(n).indexOf("3.8") !== -1) return ["level:low", "none"]
-  if (String(n).indexOf("3.6") !== -1) return ["level:minimal", "none"]
-  return ["none"]
-}
+const ladderFor = (n) => { if (String(n).indexOf("3.6") !== -1) return ["level:minimal", "none"]; return ["none"] }
 const isThinkErr = (r) => r.status === 400 && /thinking|level|minimal|low|not supported|unsupported|invalid|enum|parameter/i.test(String(r.errMsg || ""))
 const isSwitchable = (r) => r.status >= 500 || /429|quota|limit|not found|not available|timeout|504|deadline|enotfound|network|resource/i.test(String(r.errMsg || ""))
 
@@ -146,7 +148,7 @@ AppSideService({
           log("DONE via", modelName, "finish:", finishReason)
         }
 
-        const tryModel = (modelIdx, maxTok, retriedTokens, thinkStep) => {
+        const tryModel = (modelIdx, maxTok, retriedTokens, thinkStep, requestedName) => {
           if (modelIdx >= MODELS.length) { failJob("Все модели исчерпали лимит"); return }
           const modelName = MODELS[modelIdx].name
           const lad = ladderFor(modelName)
@@ -157,24 +159,22 @@ AppSideService({
           log("TRY", modelName, "max:", maxTok, "think:", mode)
           sendToProxy(body, (r) => {
             if (isThinkErr(r) && thinkStep + 1 < lad.length) {
-              log("THINK ERR", modelName, "-> step", lad[thinkStep + 1], String(r.errMsg).slice(0, 50))
-              tryModel(modelIdx, maxTok, retriedTokens, thinkStep + 1); return
+              log("THINK ERR", modelName, "-> step", lad[thinkStep + 1]); tryModel(modelIdx, maxTok, retriedTokens, thinkStep + 1, requestedName); return
             }
             if (r.content) {
               if (r.finishReason === "MAX_TOKENS" && !retriedTokens) {
-                log("MAX_TOKENS text -> retry x2"); tryModel(modelIdx, Math.min(2000, maxTok * 2), true, thinkStep); return
+                log("MAX_TOKENS text -> retry x2"); tryModel(modelIdx, Math.min(2000, maxTok * 2), true, thinkStep, requestedName); return
               }
-              finalize(modelName, MODELS[0] ? requestedOf(startIdxSafe) : modelName, r.content, r.finishReason); return
+              finalize(modelName, requestedName, r.content, r.finishReason); return
             }
             if (r.errMsg) {
               if (isSwitchable(r) && modelIdx + 1 < MODELS.length) {
-                log("FALLBACK", modelName, "->", MODELS[modelIdx + 1].name, "because", String(r.errMsg).slice(0, 40))
-                tryModel(modelIdx + 1, maxTok, false, 0); return
+                log("FALLBACK", modelName, "->", MODELS[modelIdx + 1].name); tryModel(modelIdx + 1, maxTok, false, 0, requestedName); return
               }
               failJob("Ошибка: " + r.errMsg + " [status " + r.status + " think=" + mode + "]"); return
             }
             if (r.finishReason === "MAX_TOKENS") {
-              if (!retriedTokens) { log("empty MAX_TOKENS -> retry x2"); tryModel(modelIdx, Math.min(2000, maxTok * 2), true, thinkStep); return }
+              if (!retriedTokens) { log("empty MAX_TOKENS -> retry x2"); tryModel(modelIdx, Math.min(2000, maxTok * 2), true, thinkStep, requestedName); return }
               failJob("[думала и не выдала текст - budget съеден. Подними токены или возьми лёгкую]"); return
             }
             failJob("Пустой ответ [finish=" + (r.finishReason || "none") + " status=" + r.status + " think=" + mode + "]")
@@ -182,10 +182,8 @@ AppSideService({
         }
 
         const startIdx = MODELS.findIndex((m) => m.name === getActiveModel())
-        const startIdxSafe = startIdx >= 0 ? startIdx : 0
-        const requestedName = MODELS[startIdxSafe].name
-        function requestedOf(i) { return MODELS[i] ? MODELS[i].name : requestedName }
-        tryModel(startIdxSafe, maxTokens, false, 0)
+        const si = startIdx >= 0 ? startIdx : 0
+        tryModel(si, maxTokens, false, 0, MODELS[si].name)
       }
     })
   },
