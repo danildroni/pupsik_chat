@@ -5,8 +5,7 @@ const PROXY_HOST = "https://long-snow-d028" + ".danildroni10.workers.dev"
 
 const MODELS = [
   { name: "gemini-3.6-flash", capR: 20 },
-  { name: "gemini-3.5-flash-lite", capR: 500 },
-  { name: "gemini-2.5-flash-lite", capR: 1500 }
+  { name: "gemini-3.5-flash-lite", capR: 500 }
 ]
 const ACTIVE_KEY = "pupsik_active_model"
 const STATS_KEY = "pupsik_stats_"
@@ -18,7 +17,7 @@ const getActiveModel = () => {
   try { if (typeof settings !== "undefined" && settings.settingsStorage) { const r = settings.settingsStorage.getItem(ACTIVE_KEY); if (r) n = r } } catch (err) {}
   let ok = false
   for (let i = 0; i < MODELS.length; i++) { if (MODELS[i].name === n) ok = true }
-  return ok ? n : MODELS[0].name
+  return ok ? n : MODELS[MODELS.length - 1].name
 }
 const setActiveModel = (n) => { try { if (typeof settings !== "undefined" && settings.settingsStorage) settings.settingsStorage.setItem(ACTIVE_KEY, n) } catch (e) {} }
 const loadStats = (mn) => {
