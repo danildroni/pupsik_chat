@@ -83,6 +83,7 @@ AppSideService({
       }
       if (jsonRpc.method === "CHECK_AI") ctx.response({ data: activeJob })
 
+      if (jsonRpc.method === "GET_ACTIVE") ctx.response({ data: { name: getActiveModel() } })
       if (jsonRpc.method === "GET_MODELS_STATS") {
         const active = getActiveModel()
         const list = MODELS.map((m) => { const st = loadStats(m.name); return { name: m.name, capR: m.capR, r: st.r, active: m.name === active } })

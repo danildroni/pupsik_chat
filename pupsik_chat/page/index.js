@@ -8,6 +8,8 @@ const MODES = ["RU", "EN", "NUM"]
 const TOKEN_PRESETS = Array.of(150, 300, 500, 1000)
 const TOKEN_COLORS = Array.of(0x3730a3, 0x1d4ed8, 0x701a75, 0x831843)
 
+const shortModel = (name) => String(name || "?").replace("gemini-", "").replace("-flash-lite", " L").replace("-flash", " F").replace("-preview", "")
+
 const calcTextHeight = (text) => {
   const paras = String(text || "").split("\n")
   let lines = 0
@@ -18,7 +20,7 @@ const calcTextHeight = (text) => {
 Page({
   state: {
     prompt: "", lastPrompt: "", lastKey: -1, charIndex: 0, lastTapTime: 0,
-    modeIdx: 0, tokenIdx: 1, currentChatId: String(Date.now()), noContextMode: false,
+    modeIdx: 0, tokenIdx: 1, activeShort: "?", currentChatId: String(Date.now()), noContextMode: false,
     chatList: [], isReading: false, isMenuOpen: false, lastTextH: 200, lastAnswerText: ""
   },
   onInit() { if (typeof hmSetting !== "undefined" && hmSetting.setBrightScreen) hmSetting.setBrightScreen(300) },
@@ -48,13 +50,19 @@ Page({
       click_func: () => { if (this.state.isMenuOpen) closeChatMenu(); else openChatMenu() }
     })
     const tokenBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 100, y: 8, w: 88, h: 40, radius: 14, color: 0x1d4ed8 })
-    const tokenBtn = hmUI.createWidget(hmUI.widget.TEXT, { x: 100, y: 8, w: 88, h: 40, text: "300 т", text_size: 15, color: 0xe2e8f0, align_h: hmUI.align.CENTER_H, align_v: hmUI.align.CENTER_V })
+    const tokenBtn = hmUI.createWidget(hmUI.widget.TEXT, { x: 100, y: 8, w: 88, h: 40, text: "? · 300 т", text_size: 11, color: 0xe2e8f0, align_h: hmUI.align.CENTER_H, align_v: hmUI.align.CENTER_V })
+    const refreshTokenText = () => {
+      tokenBtn.setProperty(hmUI.prop.TEXT, this.state.activeShort + " · " + String(TOKEN_PRESETS[this.state.tokenIdx]) + " т")
+    }
     tokenBtn.addEventListener(hmUI.event.CLICK_UP, () => {
       this.state.tokenIdx = (this.state.tokenIdx + 1) % TOKEN_PRESETS.length
       const i = this.state.tokenIdx
       tokenBg.setProperty(hmUI.prop.COLOR, TOKEN_COLORS[i])
-      tokenBtn.setProperty(hmUI.prop.TEXT, String(TOKEN_PRESETS[i]) + " т")
+      refreshTokenText()
     })
+    messageBuilder.request({ method: "GET_ACTIVE" }).then((res) => {
+      if (res && res.name) { this.state.activeShort = shortModel(res.name); refreshTokenText() }
+    }).catch(() => {})
 
     const retryBg = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 4, y: bottomY, w: 92, h: bottomBtnH, radius: 14, color: 0x1c212b })
     const retryBtn = hmUI.createWidget(hmUI.widget.TEXT, { x: 4, y: bottomY, w: 92, h: bottomBtnH, text: "Ещё", text_size: 14, color: 0xe2e8f0, align_h: hmUI.align.CENTER_H, align_v: hmUI.align.CENTER_V })
@@ -130,7 +138,11 @@ Page({
       const rowY = 92 + i * 56
       const btn = hmUI.createWidget(hmUI.widget.BUTTON, { x: 8, y: rowY, w: 176, h: 50, text: "", text_size: 10, text_color: 0xf8fafc, align_h: hmUI.align.LEFT, radius: 10, normal_color: 0x1f2937, press_color: 0x374151, click_func: ((idx) => () => {
         const item = limModelRows[idx]; if (!item || item.active) return
-        messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => { setTimeout(() => openLimits(), 100) })
+        messageBuilder.request({ method: "SET_ACTIVE_MODEL", params: { name: item.name } }).then(() => {
+          this.state.activeShort = shortModel(item.name)
+          refreshTokenText()
+          setTimeout(() => openLimits(), 100)
+        })
       })(i) })
       btn.setProperty(hmUI.prop.VISIBLE, false)
       limModelRows.push({ btn })
@@ -155,9 +167,10 @@ Page({
         for (let i = 0; i < 4; i++) {
           const row = limModelRows[i]; const m = list[i]
           if (m) {
-            const shortName = m.name.replace("gemini-", "").replace("-flash-lite", " L").replace("-flash", " F").replace("-preview", "")
+            const sn = shortModel(m.name)
+            if (m.active) this.state.activeShort = sn
             row.btn.setProperty(hmUI.prop.VISIBLE, true)
-            row.btn.setProperty(hmUI.prop.TEXT, shortName + "  " + barStr(m.r, m.capR) + " " + m.r + "/" + m.capR + (m.active ? " ✓" : ""))
+            row.btn.setProperty(hmUI.prop.TEXT, sn + "  " + barStr(m.r, m.capR) + " " + m.r + "/" + m.capR + (m.active ? " ✓" : ""))
             if (m.active) {
               row.btn.setProperty(hmUI.prop.NORMAL_COLOR, 0x065f46)
               row.btn.setProperty(hmUI.prop.PRESS_COLOR, 0x047857)
@@ -169,6 +182,7 @@ Page({
             row.btn.setProperty(hmUI.prop.VISIBLE, false)
           }
         }
+        refreshTokenText()
       }).catch(() => {})
     }
     setLimVisible(false)
