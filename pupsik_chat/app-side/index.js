@@ -4,10 +4,10 @@ const messageBuilder = new MessageBuilder()
 const PROXY_HOST = "https://long-snow-d028" + ".danildroni10.workers.dev"
 
 const MODELS = [
-  { name: "gemini-3-flash-preview", capR: 20 },
-  { name: "gemini-2.5-flash-lite", capR: 1500 },
-  { name: "gemini-2.0-flash", capR: 1500 },
-  { name: "gemini-2.0-flash-lite", capR: 1500 }
+  { name: "gemini-3.8-flash", capR: 20 },
+  { name: "gemini-3.6-flash", capR: 20 },
+  { name: "gemini-3.5-flash-lite", capR: 1000 },
+  { name: "gemini-2.5-flash-lite", capR: 1500 }
 ]
 const ACTIVE_KEY = "pupsik_active_model"
 const STATS_KEY = "pupsik_stats_"
@@ -15,7 +15,7 @@ const todayStr = () => { const d = new Date(); return d.getFullYear() + "-" + (d
 
 const getActiveModel = () => {
   try { if (typeof settings !== "undefined" && settings.settingsStorage) { const r = settings.settingsStorage.getItem(ACTIVE_KEY); if (r) return r } } catch (e) {}
-  return "gemini-2.5-flash-lite"
+  return "gemini-3.5-flash-lite"
 }
 const setActiveModel = (n) => { try { if (typeof settings !== "undefined" && settings.settingsStorage) settings.settingsStorage.setItem(ACTIVE_KEY, n) } catch (e) {} }
 const loadStats = (mn) => {
@@ -148,7 +148,7 @@ AppSideService({
               log("DONE via", modelName)
             } else {
               const err = String(result.error || "")
-              if ((err.indexOf("429") !== -1 || err.indexOf("quota") !== -1 || err.indexOf("limit") !== -1) && modelIdx + 1 < MODELS.length) {
+              if ((err.indexOf("429") !== -1 || err.indexOf("quota") !== -1 || err.indexOf("limit") !== -1 || err.indexOf("not found") !== -1 || err.indexOf("not available") !== -1 || err.indexOf("unsupported") !== -1 || err.indexOf("free") !== -1) && modelIdx + 1 < MODELS.length) {
                 log("RATE LIMIT on", modelName, "→ fallback")
                 tryModel(modelIdx + 1, body)
               } else {
