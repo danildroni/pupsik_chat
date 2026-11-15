@@ -12,6 +12,7 @@ const MODELS = [
 const ACTIVE_KEY = "pupsik_active_model"
 const STATS_KEY = "pupsik_stats_"
 const todayStr = () => { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate() }
+const sn = (n) => String(n || "?").replace("gemini-", "").replace("-flash-lite", " L").replace("-flash", " F").replace("-preview", "")
 
 const getActiveModel = () => {
   try { if (typeof settings !== "undefined" && settings.settingsStorage) { const r = settings.settingsStorage.getItem(ACTIVE_KEY); if (r) return r } } catch (e) {}
@@ -37,7 +38,14 @@ const saveChats = (chats) => { const s = chats.slice(0, 6); try { if (typeof set
 const formatChatTranscript = (messages) => messages.map((m) => (m.role === "user" ? "Вы:\n" : "ИИ:\n") + m.content).join("\n\n")
 const getLastUserPrompt = (messages) => { for (let i = messages.length - 1; i >= 0; i--) { if (messages[i].role === "user") return messages[i].content } return "" }
 const cleanOutputText = (rawText) => String(rawText || "").replace(/[*#_`~]/g, "").replace(/\n{3,}/g, "\n\n").trim()
-const isHeavy = (name) => String(name).indexOf("3.8") !== -1 || String(name).indexOf("3.6") !== -1
+
+const ladderFor = (n) => {
+  if (String(n).indexOf("3.8") !== -1) return ["level:low", "none"]
+  if (String(n).indexOf("3.6") !== -1) return ["level:minimal", "none"]
+  return ["none"]
+}
+const isThinkErr = (r) => r.status === 400 && /thinking|level|minimal|low|not supported|unsupported|invalid|enum|parameter/i.test(String(r.errMsg || ""))
+const isSwitchable = (r) => r.status >= 500 || /429|quota|limit|not found|not available|timeout|504|deadline|enotfound|network|resource/i.test(String(r.errMsg || ""))
 
 const sendToProxy = (body, cb) => {
   fetch({ url: PROXY_HOST, method: "POST", timeout: 30000, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
@@ -48,7 +56,7 @@ const sendToProxy = (body, cb) => {
       const content = allParts.filter((p) => !p.thought).map((p) => p.text || "").join("")
       const finishReason = cand ? String(cand.finishReason || "") : ""
       const errMsg = (data && data.error && data.error.message) ? String(data.error.message) : ""
-      log("RESP status:", res.status, "finish:", finishReason, "len:", content.length, "err:", errMsg.slice(0, 60))
+      log("RESP", res.status, "finish:", finishReason, "len:", content.length, "err:", errMsg.slice(0, 70))
       cb({ content: content, finishReason: finishReason, errMsg: errMsg, status: res.status, hasCand: !!cand })
     })
     .catch((err) => { log("FETCH CATCH:", String(err)); cb({ content: "", finishReason: "CATCH", errMsg: String(err), status: 0, hasCand: false }) })
@@ -122,9 +130,10 @@ AppSideService({
 
         const failJob = (msg) => { activeJob = { id: jobId, done: true, answer: msg, chatId: chat.id }; log("FAIL:", msg) }
 
-        const finalize = (modelName, content, finishReason) => {
+        const finalize = (modelName, requestedName, content, finishReason) => {
           let out = cleanOutputText(content) || content
           if (finishReason === "MAX_TOKENS") out = out + "\n[обрезано по бюджету - подними токены]"
+          if (modelName !== requestedName) out = "[" + sn(requestedName) + " не ответила, через " + sn(modelName) + "]\n" + out
           let freshChats = loadChats()
           let freshChat = freshChats.find((c) => c.id === chatId) || chat
           freshChat.messages.push({ role: "user", content: cleanPrompt })
@@ -136,39 +145,46 @@ AppSideService({
           log("DONE via", modelName, "finish:", finishReason)
         }
 
-        const tryModel = (modelIdx, maxTok, retried) => {
+        const tryModel = (modelIdx, maxTok, retriedTokens, thinkStep) => {
           if (modelIdx >= MODELS.length) { failJob("Все модели исчерпали лимит"); return }
           const modelName = MODELS[modelIdx].name
+          const lad = ladderFor(modelName)
+          const mode = lad[Math.min(thinkStep, lad.length - 1)]
           const genCfg = { temperature: 0.3, maxOutputTokens: maxTok }
-          if (isHeavy(modelName)) genCfg.thinkingConfig = { thinkingLevel: "minimal" }
+          if (mode !== "none") genCfg.thinkingConfig = { thinkingLevel: mode.split(":")[1] }
           const body = { systemInstruction: baseSystem, contents: baseContents, generationConfig: genCfg, model: modelName }
-          log("TRY", modelName, "max:", maxTok, "heavy:", isHeavy(modelName))
+          log("TRY", modelName, "max:", maxTok, "think:", mode)
           sendToProxy(body, (r) => {
+            if (isThinkErr(r) && thinkStep + 1 < lad.length) {
+              log("THINK ERR", modelName, "-> step", lad[thinkStep + 1], String(r.errMsg).slice(0, 50))
+              tryModel(modelIdx, maxTok, retriedTokens, thinkStep + 1); return
+            }
             if (r.content) {
-              if (r.finishReason === "MAX_TOKENS" && !retried) {
-                log("MAX_TOKENS with text -> retry x2")
-                tryModel(modelIdx, Math.min(2000, maxTok * 2), true); return
+              if (r.finishReason === "MAX_TOKENS" && !retriedTokens) {
+                log("MAX_TOKENS text -> retry x2"); tryModel(modelIdx, Math.min(2000, maxTok * 2), true, thinkStep); return
               }
-              finalize(modelName, r.content, r.finishReason); return
+              finalize(modelName, MODELS[0] ? requestedOf(startIdxSafe) : modelName, r.content, r.finishReason); return
             }
             if (r.errMsg) {
-              const switchable = r.status >= 500 || /429|quota|limit|not found|not available|unsupported|free|timeout|504|deadline|ENOTFOUND|network/i.test(r.errMsg)
-              if (switchable && modelIdx + 1 < MODELS.length) {
-                log("FALLBACK", modelName, "->", MODELS[modelIdx + 1].name, "because", r.errMsg.slice(0, 40))
-                tryModel(modelIdx + 1, maxTok, false); return
+              if (isSwitchable(r) && modelIdx + 1 < MODELS.length) {
+                log("FALLBACK", modelName, "->", MODELS[modelIdx + 1].name, "because", String(r.errMsg).slice(0, 40))
+                tryModel(modelIdx + 1, maxTok, false, 0); return
               }
-              failJob("Ошибка: " + r.errMsg + " [status " + r.status + "]"); return
+              failJob("Ошибка: " + r.errMsg + " [status " + r.status + " think=" + mode + "]"); return
             }
             if (r.finishReason === "MAX_TOKENS") {
-              if (!retried) { log("empty + MAX_TOKENS -> retry x2"); tryModel(modelIdx, Math.min(2000, maxTok * 2), true); return }
-              failJob("[модель думала и не выдала текст - budget съеден thinking. Подними токены или возьми лёгкую модель]"); return
+              if (!retriedTokens) { log("empty MAX_TOKENS -> retry x2"); tryModel(modelIdx, Math.min(2000, maxTok * 2), true, thinkStep); return }
+              failJob("[думала и не выдала текст - budget съеден. Подними токены или возьми лёгкую]"); return
             }
-            failJob("Пустой ответ [finish=" + (r.finishReason || "none") + " status=" + r.status + "]")
+            failJob("Пустой ответ [finish=" + (r.finishReason || "none") + " status=" + r.status + " think=" + mode + "]")
           })
         }
 
         const startIdx = MODELS.findIndex((m) => m.name === getActiveModel())
-        tryModel(startIdx >= 0 ? startIdx : 0, maxTokens, false)
+        const startIdxSafe = startIdx >= 0 ? startIdx : 0
+        const requestedName = MODELS[startIdxSafe].name
+        function requestedOf(i) { return MODELS[i] ? MODELS[i].name : requestedName }
+        tryModel(startIdxSafe, maxTokens, false, 0)
       }
     })
   },
