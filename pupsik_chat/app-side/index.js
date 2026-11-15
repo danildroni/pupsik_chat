@@ -5,7 +5,7 @@ const PROXY_HOST = "https://long-snow-d028" + ".danildroni10.workers.dev"
 
 const MODELS = [
   { name: "gemini-3.6-flash", capR: 20 },
-  { name: "gemini-3.5-flash-lite", capR: 1000 },
+  { name: "gemini-3.5-flash-lite", capR: 500 },
   { name: "gemini-2.5-flash-lite", capR: 1500 }
 ]
 const ACTIVE_KEY = "pupsik_active_model"
