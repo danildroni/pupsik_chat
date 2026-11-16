@@ -100,17 +100,37 @@ Page({
     }
     positionAnswerBar(bottomY, false)
 
+    const rawLines = (t) => {
+      const s = String(t || "").replace(/\n+$/, "")
+      if (!s) return 0
+      const paras = s.split("\n")
+      let n = 0
+      for (let i = 0; i < paras.length; i++) { n += Math.max(1, Math.ceil(paras[i].length / 15)) }
+      return n
+    }
     const showScrollableAnswer = (text, color, toBottom) => {
       if (String(text).includes("Network Error") && !this.state.isReading) { setTimeout(() => pollAnswer(8), 1500); return }
-      const textH = calcTextHeight(text)
+      const str = String(text)
+      const textH = calcTextHeight(str)
       this.state.lastTextH = textH; this.state.isReading = true
-      displayBox.setProperty(hmUI.prop.MORE, { x: 10, y: 52, w: 180, h: textH, text: text, text_size: 16, color: color || 0xf1f5f9 })
+      displayBox.setProperty(hmUI.prop.VISIBLE, true)
+      displayBox.setProperty(hmUI.prop.MORE, { x: 10, y: 52, w: 180, h: textH, text: str, text_size: 16, color: color || 0xf1f5f9 })
       const barY = Math.max(bottomY, 52 + textH + 10)
       positionAnswerBar(barY, true)
       const needScroll = barY + bottomBtnH > H
       setPageScroll(needScroll)
+      const maxScroll = Math.max(0, barY + bottomBtnH - H)
+      let target = 0
       if (toBottom && needScroll) {
-        setTimeout(() => { try { hmApp.setLayerY(-Math.max(0, barY + bottomBtnH - H)) } catch (e) {} }, 60)
+        target = maxScroll
+        const ai = str.lastIndexOf("ИИ:")
+        if (ai >= 0) {
+          const prefixH = rawLines(str.slice(0, ai)) * 27
+          target = Math.max(0, Math.min(maxScroll, 52 + prefixH - 40))
+        }
+      }
+      if (target > 0) {
+        setTimeout(() => { if (!this.state.isReading) return; try { hmApp.setLayerY(-target) } catch (e) {} }, 60)
       } else {
         try { hmApp.setLayerY(0) } catch (e) {}
       }
