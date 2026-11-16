@@ -9,7 +9,8 @@ const MODELS = [
 ]
 const ACTIVE_KEY = "pupsik_active_model"
 const STATS_KEY = "pupsik_stats_"
-const todayStr = () => { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate() }
+const RESET_HOUR = 15
+const todayStr = () => { const d = new Date(Date.now() - RESET_HOUR * 3600000); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate() }
 const sn = (n) => String(n || "?").replace("gemini-", "").replace("-flash-lite", " L").replace("-flash", " F").replace("-preview", "")
 
 const getActiveModel = () => {
