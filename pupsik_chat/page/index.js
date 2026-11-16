@@ -110,7 +110,7 @@ Page({
       const needScroll = barY + bottomBtnH > H
       setPageScroll(needScroll)
       if (toBottom && needScroll) {
-        setTimeout(() => { try { hmApp.setLayerY(Math.max(0, barY + bottomBtnH - H)) } catch (e) {} }, 60)
+        setTimeout(() => { try { hmApp.setLayerY(-Math.max(0, barY + bottomBtnH - H)) } catch (e) {} }, 60)
       } else {
         try { hmApp.setLayerY(0) } catch (e) {}
       }
