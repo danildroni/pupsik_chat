@@ -12,7 +12,11 @@
     "vender": "zepp",
     "description": "empty app"
   },
-  "permissions": [],
+  "permissions": [
+    "device:os.local_storage",
+    "data:os.device.info",
+    "app:os.network"
+  ],
   "runtime": {
     "apiVersion": {
       "compatible": "1.0.0",
@@ -47,5 +51,7 @@
       "appName": "pupsik_chat"
     }
   },
-  "defaultLanguage": "en-US"
+  "defaultLanguage": "en-US",
+  "appId": 20000,
+  "name": "PupsikAI"
 }
